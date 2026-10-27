@@ -1,13 +1,22 @@
 import math
+import re
 from dataclasses import dataclass
-from typing import TypeAlias
+from enum import StrEnum
+from typing import Literal, TypeAlias
 
 import torch
 
 TRAJECTORY_BATCH_SCHEMA_VERSION = "1.0"
+WEIGHT_SNAPSHOT_SCHEMA_VERSION = "1.0"
+RUNTIME_EVENT_SCHEMA_VERSION = "1.0"
+
+SUPPORTED_WEIGHT_FORMATS = frozenset({"full", "lora", "sharded"})
+SHA256_CHECKSUM_PATTERN = re.compile(r"sha256:[0-9a-f]{64}")
 
 JsonPrimitive: TypeAlias = None | bool | int | float | str
 JsonValue: TypeAlias = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
+
+WeightFormat: TypeAlias = Literal["full", "lora", "sharded"]
 
 
 def validate_json_value(value: object) -> None:
@@ -206,3 +215,138 @@ class TrajectoryBatch:
         if not isinstance(self.metadata, dict):
             raise TypeError(f"metadata must be a dict, got {type(self.metadata).__name__}")
         validate_json_value(self.metadata)
+
+
+@dataclass
+class WeightSnapshot:
+    schema_version: str
+    policy_version: int
+    format: WeightFormat
+    uri: str | None
+    checksum: str
+    metadata: dict[str, JsonValue]
+
+    def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
+        """Validate the weight snapshot descriptor."""
+        if type(self.schema_version) is not str:
+            raise TypeError(f"schema_version must be str, got {type(self.schema_version).__name__}")
+        if self.schema_version != WEIGHT_SNAPSHOT_SCHEMA_VERSION:
+            raise ValueError(
+                f"unsupported schema_version {self.schema_version!r}; "
+                f"expected {WEIGHT_SNAPSHOT_SCHEMA_VERSION!r}"
+            )
+
+        if type(self.policy_version) is not int:
+            raise TypeError(f"policy_version must be int, got {type(self.policy_version).__name__}")
+        if self.policy_version < 0:
+            raise ValueError(f"policy_version must be non-negative, got {self.policy_version}")
+
+        if not isinstance(self.format, str):
+            raise TypeError(f"format must be str, got {type(self.format).__name__}")
+        if self.format not in SUPPORTED_WEIGHT_FORMATS:
+            supported_formats = ", ".join(sorted(SUPPORTED_WEIGHT_FORMATS))
+            raise ValueError(
+                f"unsupported weight format {self.format!r}; expected one of: {supported_formats}"
+            )
+
+        if self.uri is not None:
+            if not isinstance(self.uri, str):
+                raise TypeError(f"uri must be str or None, got {type(self.uri).__name__}")
+            if not self.uri:
+                raise ValueError("uri must not be empty when provided")
+
+        if not isinstance(self.checksum, str):
+            raise TypeError(f"checksum must be str, got {type(self.checksum).__name__}")
+        if SHA256_CHECKSUM_PATTERN.fullmatch(self.checksum) is None:
+            raise ValueError(
+                "checksum must have format 'sha256:' followed by "
+                "64 lowercase hexadecimal characters"
+            )
+
+        if not isinstance(self.metadata, dict):
+            raise TypeError(f"metadata must be a dict, got {type(self.metadata).__name__}")
+        validate_json_value(self.metadata)
+
+
+class RuntimeEventType(StrEnum):
+    RUN_STARTED = "RUN_STARTED"
+    PLUGIN_LOADED = "PLUGIN_LOADED"
+    WORKER_STARTED = "WORKER_STARTED"
+    WORKER_HEARTBEAT = "WORKER_HEARTBEAT"
+    ROLLOUT_COMPLETED = "ROLLOUT_COMPLETED"
+    TRAJECTORY_DROPPED = "TRAJECTORY_DROPPED"
+    TRAIN_STEP_COMPLETED = "TRAIN_STEP_COMPLETED"
+    WEIGHT_PUBLISHED = "WEIGHT_PUBLISHED"
+    CHECKPOINT_STARTED = "CHECKPOINT_STARTED"
+    CHECKPOINT_COMPLETED = "CHECKPOINT_COMPLETED"
+    WORKER_FAILED = "WORKER_FAILED"
+    RUN_RECOVERED = "RUN_RECOVERED"
+    RUN_FINISHED = "RUN_FINISHED"
+
+
+@dataclass
+class RuntimeEvent:
+    schema_version: str
+    event_id: str
+    event_type: RuntimeEventType
+    timestamp_ns: int
+    run_id: str
+    worker_id: str | None
+    policy_version: int | None
+    payload: dict[str, JsonValue]
+
+    def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
+        """Validate a structured runtime event."""
+        if type(self.schema_version) is not str:
+            raise TypeError(f"schema_version must be str, got {type(self.schema_version).__name__}")
+        if self.schema_version != RUNTIME_EVENT_SCHEMA_VERSION:
+            raise ValueError(
+                f"unsupported schema_version {self.schema_version!r}; "
+                f"expected {RUNTIME_EVENT_SCHEMA_VERSION!r}"
+            )
+
+        if not isinstance(self.event_id, str):
+            raise TypeError(f"event_id must be str, got {type(self.event_id).__name__}")
+        if not self.event_id:
+            raise ValueError("event_id must not be empty")
+
+        if not isinstance(self.event_type, RuntimeEventType):
+            raise TypeError(
+                f"event_type must be a RuntimeEventType, got {type(self.event_type).__name__}"
+            )
+
+        if type(self.timestamp_ns) is not int:
+            raise TypeError(f"timestamp_ns must be int, got {type(self.timestamp_ns).__name__}")
+        if self.timestamp_ns < 0:
+            raise ValueError(f"timestamp_ns must be non-negative, got {self.timestamp_ns}")
+
+        if not isinstance(self.run_id, str):
+            raise TypeError(f"run_id must be str, got {type(self.run_id).__name__}")
+        if not self.run_id:
+            raise ValueError("run_id must not be empty")
+
+        if self.worker_id is not None:
+            if not isinstance(self.worker_id, str):
+                raise TypeError(
+                    f"worker_id must be str or None, got {type(self.worker_id).__name__}"
+                )
+            if not self.worker_id:
+                raise ValueError("worker_id must not be empty when provided")
+
+        if self.policy_version is not None:
+            if type(self.policy_version) is not int:
+                raise TypeError(
+                    f"policy_version must be int or None, got {type(self.policy_version).__name__}"
+                )
+            if self.policy_version < 0:
+                raise ValueError(f"policy_version must be non-negative, got {self.policy_version}")
+
+        if not isinstance(self.payload, dict):
+            raise TypeError(f"payload must be a dict, got {type(self.payload).__name__}")
+        validate_json_value(self.payload)
