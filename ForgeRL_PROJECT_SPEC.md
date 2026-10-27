@@ -65,18 +65,18 @@ ForgeRL 是一个面向大语言模型强化学习训练的轻量级运行时。
 
 ### 3.1 v1.0 包含的能力
 
-| 能力 | v1.0 要求 |
-| --- | --- |
+| 能力         | v1.0 要求                                                        |
+| ------------ | ---------------------------------------------------------------- |
 | 强化学习算法 | 完整支持 GRPO；为 PPO 或 RLOO 保留接口并至少实现一个外部示例插件 |
-| 模型规模 | 以 0.5B 级模型为主，不承诺 7B 及以上模型 |
-| 奖励 | Exact Match、格式奖励和第三方奖励插件 |
-| Rollout | Mock、Transformers、vLLM |
-| 训练 | PyTorch 单卡 LoRA；双卡实验阶段可加入 DDP 或 FSDP2 |
-| 调度 | FIFO、长度感知组批、有界异步队列 |
-| 部署范围 | 单机单 GPU和单机多 GPU |
-| 容错 | Worker 心跳、超时、失败状态、Checkpoint 和手动恢复 |
-| 观测 | 结构化日志、指标、NVTX 标注、性能报告 |
-| 扩展 | Python entry points 自动发现和独立插件包 |
+| 模型规模     | 以 0.5B 级模型为主，不承诺 7B 及以上模型                         |
+| 奖励         | Exact Match、格式奖励和第三方奖励插件                            |
+| Rollout      | Mock、Transformers、vLLM                                         |
+| 训练         | PyTorch 单卡 LoRA；双卡实验阶段可加入 DDP 或 FSDP2               |
+| 调度         | FIFO、长度感知组批、有界异步队列                                 |
+| 部署范围     | 单机单 GPU和单机多 GPU                                           |
+| 容错         | Worker 心跳、超时、失败状态、Checkpoint 和手动恢复               |
+| 观测         | 结构化日志、指标、NVTX 标注、性能报告                            |
+| 扩展         | Python entry points 自动发现和独立插件包                         |
 
 ### 3.2 明确不做的内容
 
@@ -189,14 +189,14 @@ flowchart TB
 
 ### 5.3 进程角色
 
-| 角色 | 主要职责 | 是否持有模型 |
-| --- | --- | --- |
-| Coordinator | 生命周期、任务调度、状态和错误处理 | 否 |
-| Rollout Worker | 接收 Prompt、生成回答、记录旧策略 Logprob | 是 |
-| Reward Worker | 计算规则奖励或调用奖励插件 | 通常否 |
-| Trainer Worker | 计算 Advantage、Loss、反向传播和优化器更新 | 是 |
-| Weight Publisher | 发布新的策略版本和权重快照 | 可与 Trainer 合并 |
-| Metrics Collector | 聚合事件、指标和 Trace 元数据 | 否 |
+| 角色              | 主要职责                                   | 是否持有模型      |
+| ----------------- | ------------------------------------------ | ----------------- |
+| Coordinator       | 生命周期、任务调度、状态和错误处理         | 否                |
+| Rollout Worker    | 接收 Prompt、生成回答、记录旧策略 Logprob  | 是                |
+| Reward Worker     | 计算规则奖励或调用奖励插件                 | 通常否            |
+| Trainer Worker    | 计算 Advantage、Loss、反向传播和优化器更新 | 是                |
+| Weight Publisher  | 发布新的策略版本和权重快照                 | 可与 Trainer 合并 |
+| Metrics Collector | 聚合事件、指标和 Trace 元数据              | 否                |
 
 ## 6 运行模式
 
@@ -240,11 +240,11 @@ staleness = v_current - v_trajectory
 
 支持三种策略：
 
-| 策略 | 接收条件 | 作用 |
-| --- | --- | --- |
-| strict | `staleness == 0` | 最接近同步语义，可能产生更多等待 |
-| bounded | `staleness <= max_staleness` | 在吞吐和数据新鲜度之间折中 |
-| drop | 超出阈值时丢弃 | 防止旧数据无限堆积 |
+| 策略    | 接收条件                       | 作用                             |
+| ------- | ------------------------------ | -------------------------------- |
+| strict  | `staleness == 0`             | 最接近同步语义，可能产生更多等待 |
+| bounded | `staleness <= max_staleness` | 在吞吐和数据新鲜度之间折中       |
+| drop    | 超出阈值时丢弃                 | 防止旧数据无限堆积               |
 
 必须记录旧轨迹占比、丢弃 Token 数、队列长度和 GPU 等待时间。项目不预设异步模式一定更好，最终结论以实验结果为准。
 
@@ -416,16 +416,16 @@ class TrajectoryBatch:
 
 字段约束：
 
-| 字段 | Shape | 语义 |
-| --- | --- | --- |
-| `group_ids` | `[B]` | 标识同一 Prompt 对应的多个采样 |
-| `prompt_ids` | `[B, P]` | Padding 后的 Prompt Token |
-| `response_ids` | `[B, R]` | Padding 后的生成 Token |
-| `attention_mask` | `[B, P + R]` | 模型前向使用的完整 Mask |
-| `response_mask` | `[B, R]` | 只标记参与 RL Loss 的 Response Token |
-| `old_logprobs` | `[B, R]` | 生成策略对已采样 Token 的 Log Probability |
-| `sequence_rewards` | `[B]` | 每条回答的序列级奖励 |
-| `policy_version` | Scalar | 生成整个 Batch 的策略版本 |
+| 字段                 | Shape          | 语义                                      |
+| -------------------- | -------------- | ----------------------------------------- |
+| `group_ids`        | `[B]`        | 标识同一 Prompt 对应的多个采样            |
+| `prompt_ids`       | `[B, P]`     | Padding 后的 Prompt Token                 |
+| `response_ids`     | `[B, R]`     | Padding 后的生成 Token                    |
+| `attention_mask`   | `[B, P + R]` | 模型前向使用的完整 Mask                   |
+| `response_mask`    | `[B, R]`     | 只标记参与 RL Loss 的 Response Token      |
+| `old_logprobs`     | `[B, R]`     | 生成策略对已采样 Token 的 Log Probability |
+| `sequence_rewards` | `[B]`        | 每条回答的序列级奖励                      |
+| `policy_version`   | Scalar         | 生成整个 Batch 的策略版本                 |
 
 一个 `TrajectoryBatch` 只能包含同一策略版本的数据。异步 Buffer 可以同时存放多个版本的 Batch，但不得在没有显式记录的情况下混合。
 
@@ -516,15 +516,15 @@ ProtocolViolationError
 
 ### 9.2 恢复策略
 
-| 错误 | 默认处理 |
-| --- | --- |
-| 非关键 Callback 失败 | 记录错误并继续 |
-| Reward 单条样本失败 | 标记样本失败并按配置丢弃或赋默认奖励 |
-| Rollout 请求超时 | 有限次数重试，超过阈值后失败 |
-| Worker 心跳超时 | 标记失联并停止分配新任务 |
-| Worker 进程退出 | 当前 v1.0 终止运行并允许从最近 Checkpoint 恢复 |
-| CUDA OOM | 记录 Batch 和显存状态，终止当前运行 |
-| Checkpoint 写入失败 | 保留上一个完整 Checkpoint，禁止覆盖 latest 指针 |
+| 错误                 | 默认处理                                        |
+| -------------------- | ----------------------------------------------- |
+| 非关键 Callback 失败 | 记录错误并继续                                  |
+| Reward 单条样本失败  | 标记样本失败并按配置丢弃或赋默认奖励            |
+| Rollout 请求超时     | 有限次数重试，超过阈值后失败                    |
+| Worker 心跳超时      | 标记失联并停止分配新任务                        |
+| Worker 进程退出      | 当前 v1.0 终止运行并允许从最近 Checkpoint 恢复  |
+| CUDA OOM             | 记录 Batch 和显存状态，终止当前运行             |
+| Checkpoint 写入失败  | 保留上一个完整 Checkpoint，禁止覆盖 latest 指针 |
 
 v1.0 不强制实现完全自动的 Worker 热重启。可靠地检测失败、保存证据并从完整 Checkpoint 恢复，比不稳定的自动重启更重要。
 
@@ -643,27 +643,27 @@ queue_wait
 
 ### 13.2 必须记录的指标
 
-| 分类 | 指标 |
-| --- | --- |
-| 端到端 | samples/s、generated tokens/s、train tokens/s、step wall time |
-| Rollout | Batch size、平均输出长度、P50/P95 生成延迟 |
-| Trainer | Forward、Backward、Optimizer 耗时和有效 Token 数 |
-| 队列 | 当前长度、峰值长度、等待时间、背压次数 |
-| 版本 | 当前版本、平均陈旧度、最大陈旧度、丢弃率 |
-| 权重 | 保存耗时、传输耗时、加载耗时、Snapshot 大小 |
-| GPU | 峰值显存、Allocated、Reserved、GPU Active Time |
-| 稳定性 | 重试次数、Worker 失败次数、恢复耗时 |
+| 分类    | 指标                                                          |
+| ------- | ------------------------------------------------------------- |
+| 端到端  | samples/s、generated tokens/s、train tokens/s、step wall time |
+| Rollout | Batch size、平均输出长度、P50/P95 生成延迟                    |
+| Trainer | Forward、Backward、Optimizer 耗时和有效 Token 数              |
+| 队列    | 当前长度、峰值长度、等待时间、背压次数                        |
+| 版本    | 当前版本、平均陈旧度、最大陈旧度、丢弃率                      |
+| 权重    | 保存耗时、传输耗时、加载耗时、Snapshot 大小                   |
+| GPU     | 峰值显存、Allocated、Reserved、GPU Active Time                |
+| 稳定性  | 重试次数、Worker 失败次数、恢复耗时                           |
 
 ### 13.3 性能实验矩阵
 
-| 实验 | 自变量 | 主要输出 |
-| --- | --- | --- |
-| 同步与异步 | execution mode | 吞吐、GPU 等待、最终奖励 |
-| 陈旧度阈值 | 0、1、2 | 丢弃率、吞吐、训练稳定性 |
-| 队列容量 | 1、2、4 个 Batch | 背压次数、显存、吞吐 |
-| Batch 策略 | FIFO、LengthAware | Padding 比例、生成吞吐 |
-| 权重发布 | 不同传输方案 | 同步耗时、实现复杂度 |
-| 故障恢复 | 不同故障点 | 恢复时间、丢失 Step 数 |
+| 实验       | 自变量            | 主要输出                 |
+| ---------- | ----------------- | ------------------------ |
+| 同步与异步 | execution mode    | 吞吐、GPU 等待、最终奖励 |
+| 陈旧度阈值 | 0、1、2           | 丢弃率、吞吐、训练稳定性 |
+| 队列容量   | 1、2、4 个 Batch  | 背压次数、显存、吞吐     |
+| Batch 策略 | FIFO、LengthAware | Padding 比例、生成吞吐   |
+| 权重发布   | 不同传输方案      | 同步耗时、实现复杂度     |
+| 故障恢复   | 不同故障点        | 恢复时间、丢失 Step 数   |
 
 实验报告必须记录硬件、软件版本、模型、数据集、随机种子和完整配置。只给出最好结果而不保留 Baseline 的实验无效。
 
@@ -829,24 +829,27 @@ model:
 
 algorithm:
   plugin: grpo
-  group_size: 4
-  clip_ratio: 0.2
-  kl_coef: 0.0
+  options:
+    group_size: 4
+    clip_ratio: 0.2
+    kl_coef: 0.0
 
 rollout:
   plugin: transformers
-  max_new_tokens: 256
-  temperature: 0.8
-  top_p: 0.95
+  options:
+    max_new_tokens: 256
+    temperature: 0.8
+    top_p: 0.95
 
 reward:
   plugin: exact_match
 
 trainer:
   plugin: pytorch
-  learning_rate: 1.0e-5
-  gradient_accumulation_steps: 4
-  max_grad_norm: 1.0
+  options:
+    learning_rate: 1.0e-5
+    gradient_accumulation_steps: 4
+    max_grad_norm: 1.0
 
 scheduler:
   plugin: fifo
@@ -868,12 +871,12 @@ observability:
 
 ### 17.1 已有环境
 
-| 环境 | 配置 | 主要用途 |
-| --- | --- | --- |
-| 本地 Windows | RTX 4060 8GB，WDDM | CUDA 小实验、GPU Smoke Test、接口开发 |
-| 云端 Linux | Tesla T4 14.56GB，CC 7.5 | 0.5B 模型 LoRA、单卡训练、Profiling |
-| CPU 环境 | Python 3.11 | Mock、插件、CI、容错和数据协议测试 |
-| 临时租用 | 建议 2x24GB 及以上 | 双 GPU 同步和异步最终实验 |
+| 环境         | 配置                     | 主要用途                              |
+| ------------ | ------------------------ | ------------------------------------- |
+| 本地 Windows | RTX 4060 8GB，WDDM       | CUDA 小实验、GPU Smoke Test、接口开发 |
+| 云端 Linux   | Tesla T4 14.56GB，CC 7.5 | 0.5B 模型 LoRA、单卡训练、Profiling   |
+| CPU 环境     | Python 3.11              | Mock、插件、CI、容错和数据协议测试    |
+| 临时租用     | 建议 2x24GB 及以上       | 双 GPU 同步和异步最终实验             |
 
 T4 以 FP16 为主，不将 BF16 作为默认精度。CUDA 和 PyTorch 扩展开发需要区分 PyTorch 自带 CUDA Runtime、系统 CUDA Toolkit、驱动和编译器版本，环境信息必须写入每次 Benchmark 报告。
 
@@ -932,24 +935,24 @@ T4 以 FP16 为主，不将 BF16 作为默认精度。CUDA 和 PyTorch 扩展开
 
 每周预算约 15 小时。建议分配为核心编码 6 小时、测试 3 小时、文档和源码阅读 2 小时、性能实验 2 小时、设计复盘 2 小时。
 
-| 周次 | 日期 | 主要任务 | 当周交付与验收 |
-| --- | --- | --- | --- |
-| 第1周 | 09-29 至 10-05 | 明确边界；建立仓库；定义 Schema、错误类型和配置结构；编写 ADR | `pyproject.toml`、目录骨架、数据协议初稿；基础 CI 通过 |
-| 第2周 | 10-06 至 10-12 | 实现 Registry、插件元数据、配置校验和 Runtime 状态机 | Mock 插件可以注册；非法状态转换和错误配置有测试 |
-| 第3周 | 10-13 至 10-19 | 实现插件自动发现、生命周期和 CLI | `plugin list/inspect/validate` 可用；入口点插件被发现 |
-| 第4周 | 10-20 至 10-26 | 建立外部插件仓库和一致性测试 | 外部 Reward 插件安装后通过 `plugin test`；主仓库零修改 |
-| 第5周 | 10-27 至 11-02 | 实现 Tiny Model Rollout、Exact Match Reward 和 Dataset Adapter | CPU 或小模型能生成轨迹；TrajectoryBatch 校验通过 |
-| 第6周 | 11-03 至 11-09 | 实现 GRPO Advantage、Loss 和参考测试 | 单步计算与独立参考实现对齐；Mask 边界测试通过 |
-| 第7周 | 11-10 至 11-16 | 实现单卡 PyTorch Trainer、LoRA 和优化器状态 | Tiny Model 多 Step 训练；Loss、Reward、梯度指标可见 |
-| 第8周 | 11-17 至 11-23 | 0.5B 模型闭环、基础 Checkpoint、整理 v0.1 | 发布 v0.1；从配置启动并从 Checkpoint 恢复 |
-| 第9周 | 11-24 至 11-30 | 进程隔离；实现 Coordinator 和 Worker 消息协议 | Mock 多进程运行；正常退出后无孤儿进程和死锁 |
-| 第10周 | 12-01 至 12-07 | Versioned Buffer、队列容量和背压 | 队列压力测试通过；版本和丢弃事件可追踪 |
-| 第11周 | 12-08 至 12-14 | 实现 vLLM Backend 和权重版本加载 | 单卡分时 Rollout 可运行；显存和权重加载耗时有记录 |
-| 第12周 | 12-15 至 12-21 | 心跳、超时、错误封装和故障注入；发布 v0.2 | 可检测 Worker 退出和超时；最近完整 Checkpoint 可恢复 |
-| 第13周 | 12-22 至 12-28 | 搭建双 GPU 分离同步模式 | GPU 0 Rollout、GPU 1 Trainer；同步 Baseline 完整运行 |
-| 第14周 | 12-29 至 01-04 | 有界异步队列和策略陈旧度控制 | `max_staleness=0/1/2` 均可运行；丢弃指标正确 |
-| 第15周 | 01-05 至 01-11 | Benchmark、NVTX、Nsight 和性能分析 | 得到同步/异步对照数据、Trace 和瓶颈说明 |
-| 第16周 | 01-12 至 01-18 | 文档、演示、Release、简历材料 | 发布 v1.0；中英文 README、报告、视频和简历条目完成 |
+| 周次   | 日期           | 主要任务                                                       | 当周交付与验收                                           |
+| ------ | -------------- | -------------------------------------------------------------- | -------------------------------------------------------- |
+| 第1周  | 09-29 至 10-05 | 明确边界；建立仓库；定义 Schema、错误类型和配置结构；编写 ADR  | `pyproject.toml`、目录骨架、数据协议初稿；基础 CI 通过 |
+| 第2周  | 10-06 至 10-12 | 实现 Registry、插件元数据、配置校验和 Runtime 状态机           | Mock 插件可以注册；非法状态转换和错误配置有测试          |
+| 第3周  | 10-13 至 10-19 | 实现插件自动发现、生命周期和 CLI                               | `plugin list/inspect/validate` 可用；入口点插件被发现  |
+| 第4周  | 10-20 至 10-26 | 建立外部插件仓库和一致性测试                                   | 外部 Reward 插件安装后通过 `plugin test`；主仓库零修改 |
+| 第5周  | 10-27 至 11-02 | 实现 Tiny Model Rollout、Exact Match Reward 和 Dataset Adapter | CPU 或小模型能生成轨迹；TrajectoryBatch 校验通过         |
+| 第6周  | 11-03 至 11-09 | 实现 GRPO Advantage、Loss 和参考测试                           | 单步计算与独立参考实现对齐；Mask 边界测试通过            |
+| 第7周  | 11-10 至 11-16 | 实现单卡 PyTorch Trainer、LoRA 和优化器状态                    | Tiny Model 多 Step 训练；Loss、Reward、梯度指标可见      |
+| 第8周  | 11-17 至 11-23 | 0.5B 模型闭环、基础 Checkpoint、整理 v0.1                      | 发布 v0.1；从配置启动并从 Checkpoint 恢复                |
+| 第9周  | 11-24 至 11-30 | 进程隔离；实现 Coordinator 和 Worker 消息协议                  | Mock 多进程运行；正常退出后无孤儿进程和死锁              |
+| 第10周 | 12-01 至 12-07 | Versioned Buffer、队列容量和背压                               | 队列压力测试通过；版本和丢弃事件可追踪                   |
+| 第11周 | 12-08 至 12-14 | 实现 vLLM Backend 和权重版本加载                               | 单卡分时 Rollout 可运行；显存和权重加载耗时有记录        |
+| 第12周 | 12-15 至 12-21 | 心跳、超时、错误封装和故障注入；发布 v0.2                      | 可检测 Worker 退出和超时；最近完整 Checkpoint 可恢复     |
+| 第13周 | 12-22 至 12-28 | 搭建双 GPU 分离同步模式                                        | GPU 0 Rollout、GPU 1 Trainer；同步 Baseline 完整运行     |
+| 第14周 | 12-29 至 01-04 | 有界异步队列和策略陈旧度控制                                   | `max_staleness=0/1/2` 均可运行；丢弃指标正确           |
+| 第15周 | 01-05 至 01-11 | Benchmark、NVTX、Nsight 和性能分析                             | 得到同步/异步对照数据、Trace 和瓶颈说明                  |
+| 第16周 | 01-12 至 01-18 | 文档、演示、Release、简历材料                                  | 发布 v1.0；中英文 README、报告、视频和简历条目完成       |
 
 ## 20 每阶段验收门槛
 
@@ -971,17 +974,17 @@ T4 以 FP16 为主，不将 BF16 作为默认精度。CUDA 和 PyTorch 扩展开
 
 ## 21 风险与控制措施
 
-| 风险 | 可能后果 | 控制措施 |
-| --- | --- | --- |
-| 接口设计过早复杂化 | 大量抽象但没有真实训练 | 每个接口必须有内置实现和外部示例；先 Mock 再真实后端 |
-| vLLM 与训练显存冲突 | T4 上无法同时驻留 | v0.1 使用串行复用和 LoRA；双卡只用于最终实验 |
-| 多进程死锁 | 调试时间不可控 | 所有等待有超时；先在 CPU Mock 中进行压力测试 |
-| 权重版本标记错误 | 训练使用错误轨迹 | Snapshot、Trajectory、事件共享统一版本；加载后才更新 Worker 版本 |
-| GRPO 实现错误 | 结果表面可运行但无意义 | 与参考实现对齐；对 Mask、全相同 Reward 等边界进行测试 |
-| Checkpoint 不完整 | 不能真正恢复 | 保存 RNG、数据游标、插件状态和版本；做中断恢复集成测试 |
-| 过度追求 CUDA Kernel | 主线延期 | 仅在 Nsight 证明瓶颈后进入扩展任务 |
-| 多卡成本过高 | 无法完成最终实验 | 先完成固定脚本和短 Smoke Test；集中租用 10 至 20 小时 |
-| 范围持续扩张 | v1.0 无法按时完成 | 新需求先进入 Roadmap；除非修复正确性问题，不改变 v1.0 范围 |
+| 风险                 | 可能后果               | 控制措施                                                         |
+| -------------------- | ---------------------- | ---------------------------------------------------------------- |
+| 接口设计过早复杂化   | 大量抽象但没有真实训练 | 每个接口必须有内置实现和外部示例；先 Mock 再真实后端             |
+| vLLM 与训练显存冲突  | T4 上无法同时驻留      | v0.1 使用串行复用和 LoRA；双卡只用于最终实验                     |
+| 多进程死锁           | 调试时间不可控         | 所有等待有超时；先在 CPU Mock 中进行压力测试                     |
+| 权重版本标记错误     | 训练使用错误轨迹       | Snapshot、Trajectory、事件共享统一版本；加载后才更新 Worker 版本 |
+| GRPO 实现错误        | 结果表面可运行但无意义 | 与参考实现对齐；对 Mask、全相同 Reward 等边界进行测试            |
+| Checkpoint 不完整    | 不能真正恢复           | 保存 RNG、数据游标、插件状态和版本；做中断恢复集成测试           |
+| 过度追求 CUDA Kernel | 主线延期               | 仅在 Nsight 证明瓶颈后进入扩展任务                               |
+| 多卡成本过高         | 无法完成最终实验       | 先完成固定脚本和短 Smoke Test；集中租用 10 至 20 小时            |
+| 范围持续扩张         | v1.0 无法按时完成      | 新需求先进入 Roadmap；除非修复正确性问题，不改变 v1.0 范围       |
 
 ## 22 Agent 开发规则
 
@@ -1155,7 +1158,7 @@ T4 以 FP16 为主，不将 BF16 作为默认精度。CUDA 和 PyTorch 扩展开
   https://docs.pytorch.org/tutorials/intermediate/FSDP_tutorial.html
 - PyTorch Distributed Checkpoint  
   https://docs.pytorch.org/tutorials/recipes/distributed_checkpoint_recipe.html
-- Python Packaging Plugin Discovery  
+- Python Packaging Plugin Discovery
   https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/
 
 ---

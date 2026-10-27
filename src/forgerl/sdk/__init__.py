@@ -1,5 +1,21 @@
 """Public SDK types exposed to ForgeRL plugins and runtime components."""
 
+from forgerl.sdk.errors import (
+    CheckpointError,
+    ConfigurationError,
+    ErrorEnvelope,
+    ForgeRLError,
+    OutOfMemoryError,
+    PluginCompatibilityError,
+    PluginError,
+    PluginExecutionError,
+    PluginLoadError,
+    ProtocolViolationError,
+    WeightSyncError,
+    WorkerCrashedError,
+    WorkerError,
+    WorkerTimeoutError,
+)
 from forgerl.sdk.schemas import (
     JsonPrimitive,
     JsonValue,
@@ -12,12 +28,26 @@ from forgerl.sdk.schemas import (
 )
 
 __all__ = [
+    "CheckpointError",
+    "ConfigurationError",
+    "ErrorEnvelope",
+    "ForgeRLError",
     "JsonPrimitive",
     "JsonValue",
+    "OutOfMemoryError",
+    "PluginCompatibilityError",
+    "PluginError",
+    "PluginExecutionError",
+    "PluginLoadError",
+    "ProtocolViolationError",
     "RuntimeEvent",
     "RuntimeEventType",
     "TrajectoryBatch",
+    "WeightSyncError",
     "WeightFormat",
     "WeightSnapshot",
+    "WorkerCrashedError",
+    "WorkerError",
+    "WorkerTimeoutError",
     "validate_json_value",
 ]

@@ -13,7 +13,10 @@ license-files = ["LICENSE"]
 authors = [
     { name = "qygsCu" },
 ]
-dependencies = []
+dependencies = [
+    "pydantic>=2,<3",
+    "torch",
+]
 
 [project.optional-dependencies]
 dev = [
