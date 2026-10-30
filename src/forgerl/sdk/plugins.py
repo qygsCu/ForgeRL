@@ -24,7 +24,16 @@ class PluginKind(StrEnum):
 
 @dataclass(frozen=True)
 class PluginMetadata:
-    """Immutable plugin identity and capabilities, without runtime resources."""
+    """Declare plugin identity and capabilities without holding runtime resources.
+
+    The pair of kind and name identifies a plugin within a registry. Version is the
+    plugin's own version; api_version identifies the SDK contract it implements.
+    Capability names are immutable sets of non-empty strings. Support flags describe
+    the implementation and are checked here for boolean type, not actual support.
+
+    Construction rejects malformed declarations with PluginLoadError. SDK version
+    compatibility is checked later by the registry.
+    """
 
     name: str
     kind: PluginKind
@@ -37,6 +46,7 @@ class PluginMetadata:
     requires_gpu: bool
 
     def __post_init__(self) -> None:
+        """Validate the metadata immediately after dataclass construction."""
         self.validate()
 
     def validate(self) -> None:
@@ -67,6 +77,14 @@ class PluginDescriptor:
 
     The factory constructs an instance without arguments. Validated configuration
     is passed later by the lifecycle manager during plugin initialization.
+
+    Attributes:
+        metadata: Identity, SDK API version, and declared plugin capabilities.
+        config_model: Pydantic model class used to validate options. It must set
+            extra='forbid' to reject unknown parameters.
+        factory: Callable retained for later plugin construction, not an instance.
+
+    This descriptor is process-local and is not a JSON serialization format.
     """
 
     metadata: PluginMetadata
@@ -74,10 +92,17 @@ class PluginDescriptor:
     factory: Callable[[], object]
 
     def __post_init__(self) -> None:
+        """Reject malformed registration data without calling the plugin factory."""
         self.validate()
 
     def validate(self) -> None:
-        """Validate the declaration without constructing a model or plugin instance."""
+        """Check metadata, the configuration model class, and factory callability.
+
+        Raises:
+            PluginLoadError: Any descriptor field violates its declaration contract.
+
+        This does not inspect the factory's signature or validate plugin options.
+        """
         if not isinstance(self.metadata, PluginMetadata):
             raise PluginLoadError("metadata must be a PluginMetadata")
         self.metadata.validate()
@@ -88,3 +113,23 @@ class PluginDescriptor:
             raise PluginLoadError("config_model must reject unknown fields with extra='forbid'")
         if not callable(self.factory):
             raise PluginLoadError("factory must be callable")
+
+
+@dataclass(frozen=True)
+class ValidatedPluginConfigs:
+    """Hold the five plugin configuration instances produced by run validation.
+
+    Each field contains the concrete Pydantic model declared by that plugin's
+    descriptor. Runtime lifecycle code can pass these instances to initialization
+    after all selections have passed validation. Plugin names and scheduler core
+    settings remain in the original ForgeRLConfig.
+
+    This is a result container, not a validator: direct construction does not check
+    its fields. Frozen bindings do not make the contained Pydantic models immutable.
+    """
+
+    algorithm: BaseModel
+    rollout: BaseModel
+    reward: BaseModel
+    trainer: BaseModel
+    scheduler: BaseModel

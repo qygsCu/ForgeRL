@@ -16,6 +16,13 @@ from forgerl.sdk.errors import (
     WorkerError,
     WorkerTimeoutError,
 )
+from forgerl.sdk.plugins import (
+    SDK_API_VERSION,
+    PluginDescriptor,
+    PluginKind,
+    PluginMetadata,
+    ValidatedPluginConfigs,
+)
 from forgerl.sdk.schemas import (
     JsonPrimitive,
     JsonValue,
@@ -36,13 +43,18 @@ __all__ = [
     "JsonValue",
     "OutOfMemoryError",
     "PluginCompatibilityError",
+    "PluginDescriptor",
     "PluginError",
     "PluginExecutionError",
+    "PluginKind",
     "PluginLoadError",
+    "PluginMetadata",
     "ProtocolViolationError",
     "RuntimeEvent",
     "RuntimeEventType",
+    "SDK_API_VERSION",
     "TrajectoryBatch",
+    "ValidatedPluginConfigs",
     "WeightSyncError",
     "WeightFormat",
     "WeightSnapshot",

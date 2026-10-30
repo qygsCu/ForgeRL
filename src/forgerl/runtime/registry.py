@@ -8,6 +8,7 @@ class PluginRegistry:
     """Store plugin descriptors by category and name without calling their factories."""
 
     def __init__(self) -> None:
+        """Create an empty registry with storage independent of other instances."""
         self._plugins: dict[tuple[PluginKind, str], PluginDescriptor] = {}
 
     def register(self, descriptor: PluginDescriptor) -> None:
@@ -15,6 +16,10 @@ class PluginRegistry:
 
         Descriptor construction validates its declaration. Registration only checks
         SDK compatibility and uniqueness; failed registration leaves existing entries intact.
+
+        Raises:
+            PluginCompatibilityError: The declared SDK API version is unsupported.
+            PluginLoadError: A plugin with the same category and name is registered.
         """
         metadata = descriptor.metadata
         plugin_id = f"{metadata.kind.value}:{metadata.name}"
@@ -29,14 +34,22 @@ class PluginRegistry:
         self._plugins[key] = descriptor
 
     def get(self, kind: PluginKind, name: str) -> PluginDescriptor:
-        """Return the registered descriptor or reject an unknown plugin selection."""
+        """Return the original descriptor identified by category and name.
+
+        Raises:
+            ConfigurationError: No plugin is registered under the requested key.
+        """
         key = (kind, name)
         if key not in self._plugins:
             raise ConfigurationError(f"plugin {kind.value}:{name} is not registered")
         return self._plugins[key]
 
     def list_plugins(self, kind: PluginKind | None = None) -> list[PluginDescriptor]:
-        """Return a new list sorted by category value and name, optionally filtered by kind."""
+        """Return descriptors sorted by category value and name, optionally filtered.
+
+        Passing None includes all categories. The returned list is separate from
+        registry storage, while its entries are the original descriptor objects.
+        """
         descriptors = [
             descriptor
             for descriptor in self._plugins.values()
