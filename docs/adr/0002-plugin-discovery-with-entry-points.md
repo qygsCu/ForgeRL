@@ -146,6 +146,14 @@ PluginSelection.options 负责承载严格 JSON 参数；
 
 插件配置拒绝未知字段。校验失败时不得调用插件工厂或初始化方法。
 
+`validate_plugin_options()` 接收插件选择、类别和 Registry，返回该插件的
+配置模型实例；参数校验失败转换为 `ConfigurationError` 并保留原始异常链。
+`validate_run_plugins()` 按 algorithm、rollout、reward、trainer、scheduler
+的顺序校验五组插件参数，全部成功后返回 SDK 的 `ValidatedPluginConfigs`。
+遇到首个错误立即失败，不返回部分结果。Scheduler 的核心队列与陈旧度字段
+保留在 `ForgeRLConfig` 中，只有 `options` 交给插件配置模型。
+这两个入口不创建插件，也不负责运行环境能力检查；能力检查在初始化前另行执行。
+
 必需能力不满足时拒绝运行；可选能力缺失时，
 插件必须按照其公开约定运行。
 
