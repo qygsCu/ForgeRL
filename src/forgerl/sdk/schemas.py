@@ -272,6 +272,9 @@ class WeightSnapshot:
 
 
 class RuntimeEventType(StrEnum):
+    """Controlled event categories shared by runtime producers and consumers."""
+
+    RUN_STATE_CHANGED = "RUN_STATE_CHANGED"
     RUN_STARTED = "RUN_STARTED"
     PLUGIN_LOADED = "PLUGIN_LOADED"
     WORKER_STARTED = "WORKER_STARTED"

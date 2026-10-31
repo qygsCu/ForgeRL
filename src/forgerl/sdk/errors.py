@@ -33,6 +33,10 @@ class PluginExecutionError(PluginError):
     """Raised when an initialized plugin fails during execution."""
 
 
+class InvalidStateTransitionError(ForgeRLError):
+    """Raised when a run requests a transition forbidden by its lifecycle rules."""
+
+
 class WorkerError(ForgeRLError):
     """Base class for worker-related failures."""
 

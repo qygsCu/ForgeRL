@@ -8,6 +8,7 @@ from forgerl.sdk import (
     ConfigurationError,
     ErrorEnvelope,
     ForgeRLError,
+    InvalidStateTransitionError,
     OutOfMemoryError,
     PluginCompatibilityError,
     PluginError,
@@ -38,6 +39,7 @@ def make_valid_error_envelope() -> ErrorEnvelope:
     [
         ConfigurationError,
         ProtocolViolationError,
+        InvalidStateTransitionError,
         PluginLoadError,
         PluginCompatibilityError,
         PluginExecutionError,

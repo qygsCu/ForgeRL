@@ -37,6 +37,7 @@ def make_descriptor(
         factory=unexpected_factory,
     )
 
+
 def test_register_and_get_preserve_descriptor_without_creating_plugin() -> None:
     registry = PluginRegistry()
     descriptor = make_descriptor()
