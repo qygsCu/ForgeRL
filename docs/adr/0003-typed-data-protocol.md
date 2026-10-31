@@ -141,6 +141,8 @@ sha256:<64 个小写十六进制字符>
 
 核心事件类型使用受控的字符串枚举，避免同一事件出现不同拼写。`event_id` 和 `run_id` 必须为非空字符串，`timestamp_ns` 必须为非负整数，`policy_version` 必须为 `None` 或非负整数。
 
+按 [ADR-0009](0009-runtime-state-machine.md)，新增 `RUN_STATE_CHANGED` 事件，payload 包含非空字符串 `from_state`、`to_state` 和 `reason`。该 payload 由状态机按转换契约构造；通用 RuntimeEvent 验证器仍负责字段类型和严格 JSON 约束，不负责检查状态转换规则。这是尚未发布稳定协议时的开发阶段契约修订，RuntimeEvent Schema 保持 `"1.0"`；使用封闭枚举的生产者和消费者必须同步更新，不保证旧消费者接受新增事件值。
+
 `timestamp_ns` 表示用于跨进程关联事件的 Unix wall-clock 纳秒时间。性能耗时应使用单独记录的 monotonic duration，不依赖两个 wall-clock 时间戳相减。
 
 事件 `payload` 仅允许严格 `JsonValue`，不得携带大 Tensor、异常对象或不可序列化资源。
