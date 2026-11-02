@@ -167,6 +167,37 @@ PluginSelection.options 负责承载严格 JSON 参数；
 
 不得通过静默跳过冲突、自动替换插件或忽略参数来继续训练。
 
+### 8. 单插件生命周期与资源所有权
+
+初始化统一接收 SDK 的 `PluginContext`，当前仅包含已校验的插件配置
+`config: BaseModel`。开发者配置模型仍继承 Pydantic BaseModel，Context
+持有配置实例，不要求配置模型继承 Context。Context 是进程内输入，
+不是 JSON 配置格式；冻结字段绑定不保证内部配置不可变。
+
+SDK 的 `PluginLifecycle` Protocol 描述 `initialize(context) -> None` 和
+`shutdown() -> None`。插件无需显式继承协议。Runtime 在工厂返回后检查
+两个方法是否可调用；这不保证签名、业务接口或资源释放行为正确。
+
+`managed_plugin(descriptor, context)` 管理单进程中的一次插件使用：
+
+- 调用前，配置及运行环境应已完成校验，描述对象应已通过 Registry 注册。
+  管理入口只额外检查配置实例是否匹配描述对象的配置模型，不重新校验参数。
+- 构造函数保持轻量；工厂失败或生命周期声明不完整时抛出 PluginLoadError。
+  构造阶段产生的资源由构造函数自行清理，非法实例不会被初始化。
+- 初始化成功后才将实例交给 with 块；初始化普通异常包装为
+  PluginExecutionError 并保留异常链。with 块的业务异常原样传播。
+- 初始化或业务执行失败（包括进程内 Python 中断）后仍尝试关闭实例。
+  不能保证进程被强制终止时执行清理。
+- 只有关闭失败时，普通异常包装为 PluginExecutionError；原始操作和关闭
+  同时失败时，记录关闭异常及堆栈，继续传播原始异常。
+- 管理入口对合法实例尝试关闭一次，不自动重试。插件的 shutdown 应支持
+  部分初始化及重复调用，且只释放自己拥有的资源。
+
+本次新增开发阶段公共接口；发现入口、PluginDescriptor 和 SDK API 版本
+保持不变。先前示例的 initialize(config) 需调整为 initialize(context)，
+从 context.config 读取配置。运行服务注入、健康检查、能力检查、多插件
+协调和业务类别 Protocol 尚未由此实现；健康检查和能力检查仍是后续工作。
+
 ## Alternatives Considered
 
 ### 在 Runtime 中直接导入具体插件
