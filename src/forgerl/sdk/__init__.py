@@ -17,6 +17,7 @@ from forgerl.sdk.errors import (
     WorkerError,
     WorkerTimeoutError,
 )
+from forgerl.sdk.lifecycle import PluginContext, PluginLifecycle
 from forgerl.sdk.plugins import (
     SDK_API_VERSION,
     PluginDescriptor,
@@ -45,10 +46,12 @@ __all__ = [
     "JsonValue",
     "OutOfMemoryError",
     "PluginCompatibilityError",
+    "PluginContext",
     "PluginDescriptor",
     "PluginError",
     "PluginExecutionError",
     "PluginKind",
+    "PluginLifecycle",
     "PluginLoadError",
     "PluginMetadata",
     "ProtocolViolationError",
