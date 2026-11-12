@@ -1,7 +1,7 @@
 """Manage initialization and cleanup for a single plugin instance."""
 
 import logging
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from typing import cast
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def managed_plugin(
     descriptor: PluginDescriptor,
     context: PluginContext,
-) -> Iterator[PluginLifecycle]:
+) -> Generator[PluginLifecycle, None, None]:
     """Yield an initialized plugin and attempt cleanup once when its scope exits.
 
     Configuration must already be validated; only its model type is checked here.
