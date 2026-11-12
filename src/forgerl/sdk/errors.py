@@ -30,7 +30,7 @@ class PluginCompatibilityError(PluginError):
 
 
 class PluginExecutionError(PluginError):
-    """Raised when an initialized plugin fails during execution."""
+    """Raised when a plugin fails during initialization, execution, or shutdown."""
 
 
 class InvalidStateTransitionError(ForgeRLError):

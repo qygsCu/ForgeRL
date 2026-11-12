@@ -18,6 +18,9 @@ dependencies = [
     "torch",
 ]
 
+[project.scripts]
+forgerl = "forgerl.cli.main:main"
+
 [project.optional-dependencies]
 dev = [
     "build>=1.2",
