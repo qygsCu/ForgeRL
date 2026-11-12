@@ -198,6 +198,31 @@ SDK 的 `PluginLifecycle` Protocol 描述 `initialize(context) -> None` 和
 从 context.config 读取配置。运行服务注入、健康检查、能力检查、多插件
 协调和业务类别 Protocol 尚未由此实现；健康检查和能力检查仍是后续工作。
 
+### 9. CLI 命令与参数解析
+
+CLI 使用标准库 argparse，命令结构为：
+
+```text
+forgerl plugin list [--kind KIND]
+forgerl plugin inspect NAME --kind KIND
+forgerl plugin validate NAME --kind KIND --options FILE
+```
+
+KIND 的合法值来自 SDK 的 PluginKind。list 不指定类别时列出全部类别；
+inspect 和 validate 必须指定类别，因为不同类别允许注册同名插件。
+FILE 是只包含插件 options 的 JSON 文件，而非完整运行配置。
+
+`build_parser()` 只构造解析器，不发现插件、不读取参数文件、不创建实例。
+解析结果使用 command、plugin_command、name、kind 和 options 字段；
+kind 为字符串，未过滤的 list 使用 None；options 为 pathlib.Path。
+缺少必需命令或参数、非法类别及未知参数由 argparse 拒绝，退出码为 2；
+帮助信息退出码为 0。main 执行成功返回 0；预期的插件、文件、编码和
+JSON 读取错误写入标准错误并返回 1；其他程序异常继续传播。
+inspect 输出包含 metadata 和 config_schema 的 JSON；能力集合按名称排序。
+validate 输出包含默认值的有效配置 JSON，顶层参数必须是 JSON 对象。
+validate 的范围是插件声明及配置参数，不包含初始化、健康检查或能力检查。
+所有管理命令均不得调用插件工厂。
+
 ## Alternatives Considered
 
 ### 在 Runtime 中直接导入具体插件
