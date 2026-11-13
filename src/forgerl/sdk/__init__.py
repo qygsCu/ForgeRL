@@ -25,15 +25,20 @@ from forgerl.sdk.plugins import (
     PluginMetadata,
     ValidatedPluginConfigs,
 )
+from forgerl.sdk.rewards import RewardPlugin
 from forgerl.sdk.schemas import (
     JsonPrimitive,
     JsonValue,
+    RewardOutput,
+    RewardResult,
+    RewardSample,
     RuntimeEvent,
     RuntimeEventType,
     TrajectoryBatch,
     WeightFormat,
     WeightSnapshot,
     validate_json_value,
+    validate_reward_samples,
 )
 
 __all__ = [
@@ -55,6 +60,10 @@ __all__ = [
     "PluginLoadError",
     "PluginMetadata",
     "ProtocolViolationError",
+    "RewardOutput",
+    "RewardPlugin",
+    "RewardResult",
+    "RewardSample",
     "RuntimeEvent",
     "RuntimeEventType",
     "SDK_API_VERSION",
@@ -67,4 +76,5 @@ __all__ = [
     "WorkerError",
     "WorkerTimeoutError",
     "validate_json_value",
+    "validate_reward_samples",
 ]
