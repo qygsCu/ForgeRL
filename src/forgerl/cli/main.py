@@ -10,8 +10,9 @@ from forgerl.config.models import PluginSelection
 from forgerl.runtime.discovery import discover_plugins
 from forgerl.runtime.registry import PluginRegistry
 from forgerl.runtime.validation import validate_plugin_options
-from forgerl.sdk.errors import ConfigurationError, ForgeRLError
+from forgerl.sdk.errors import ConfigurationError, ForgeRLError, ProtocolViolationError
 from forgerl.sdk.plugins import PluginKind
+from forgerl.sdk.schemas import RewardSample, validate_reward_samples
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -70,6 +71,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             _inspect_plugin(registry, PluginKind(args.kind), args.name)
         elif args.plugin_command == "validate":
             _validate_plugin(registry, PluginKind(args.kind), args.name, args.options)
+        elif args.plugin_command == "test":
+            _validate_samples(registry, PluginKind(args.kind), args.name, args.options, args.sample_path)
         else:
             parser.error(f"unsupported plugin command: {args.plugin_command}")
 
@@ -138,3 +141,62 @@ def _validate_plugin(
 
     validated = validate_plugin_options(selection, kind=kind, registry=registry)
     print(validated.model_dump_json(indent=2))
+
+
+def _validate_samples(samples_path: Path) -> tuple[RewardSample, ...]:
+    """Read a strict JSON array into validated, unmodified reward records.
+
+    This helper never discovers or constructs plugins. File access failures are
+    configuration errors; malformed sample data is a protocol violation.
+    Empty references remain structurally valid; the selected scorer owns any
+    task-specific restrictions. No new batch-input schema is introduced.
+    """
+    try:
+        source = samples_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise ConfigurationError(f"cannot read samples file {samples_path}: {exc}") from exc
+
+    def unique_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        record: dict[str, object] = {}
+        for key, value in pairs:
+            if key in record:
+                raise ProtocolViolationError(
+                    f"samples file {samples_path}: duplicate field {key!r}"
+                )
+            record[key] = value
+        return record
+
+    try:
+        raw_samples = loads(source, object_pairs_hook=unique_fields)
+    except JSONDecodeError as exc:
+        raise ProtocolViolationError(
+            f"samples file {samples_path}: invalid JSON at line {exc.lineno}, "
+            f"column {exc.colno}: {exc.msg}"
+        ) from exc
+    if not isinstance(raw_samples, list):
+        raise ProtocolViolationError(f"samples file {samples_path}: $ must be a JSON array")
+
+    required = {"request_id", "response", "reference_answer"}
+    samples: list[RewardSample] = []
+    for index, item in enumerate(raw_samples):
+        location = f"samples file {samples_path}: $[{index}]"
+        if not isinstance(item, dict):
+            raise ProtocolViolationError(f"{location} must be a JSON object")
+        missing, unknown = required - item.keys(), item.keys() - required
+        if missing or unknown:
+            raise ProtocolViolationError(
+                f"{location}: missing fields={sorted(missing)}, unknown fields={sorted(unknown)}"
+            )
+        for field in sorted(required):
+            if not isinstance(item[field], str):
+                raise ProtocolViolationError(f"{location}.{field} must be a string")
+        try:
+            samples.append(RewardSample(**item))
+        except ProtocolViolationError as exc:
+            raise ProtocolViolationError(f"{location}: {exc}") from exc
+
+    try:
+        validate_reward_samples(samples)
+    except ProtocolViolationError as exc:
+        raise ProtocolViolationError(f"samples file {samples_path}: {exc}") from exc
+    return tuple(samples)
