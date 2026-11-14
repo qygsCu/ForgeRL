@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "forgerl-math-reward"
+version = "0.1.0"
+description = "Strict text and exact numeric rewards for ForgeRL"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["forgerl>=0.1.0.dev0", "pydantic>=2,<3"]
+
+[project.entry-points."forgerl.reward"]
+math_reward = "forgerl_math_reward:MathReward"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["forgerl_math_reward*"]
+namespaces = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
