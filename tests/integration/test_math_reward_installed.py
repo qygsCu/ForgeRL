@@ -69,6 +69,62 @@ def test_installed_math_reward_rules_and_runtime(tmp_path: Path) -> None:
             str(options),
         )
         assert json.loads(result.stdout) == {"match_mode": mode}
+        checked = json.loads(
+            run(
+                executable,
+                "plugin",
+                "test",
+                "math_reward",
+                "--kind",
+                "reward",
+                "--options",
+                str(options),
+                "--samples",
+                str(package / "samples.json"),
+            ).stdout
+        )
+        assert checked["status"] == "passed"
+        assert checked["config"] == {"match_mode": mode}
+        assert checked["sample_count"] == checked["valid_count"] == 3
+        assert checked["invalid_count"] == 0
+        assert checked["failures"] == {}
+
+    default = json.loads(
+        run(
+            executable,
+            "plugin",
+            "test",
+            "math_reward",
+            "--kind",
+            "reward",
+            "--samples",
+            str(package / "samples.json"),
+        ).stdout
+    )
+    assert default["config"] == {"match_mode": "strict"}
+    invalid_samples = tmp_path / "invalid_samples.json"
+    invalid_samples.write_text("[]", encoding="utf-8")
+    rejected = subprocess.run(
+        [
+            executable,
+            "plugin",
+            "test",
+            "math_reward",
+            "--kind",
+            "reward",
+            "--samples",
+            str(invalid_samples),
+        ],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+    )
+    assert rejected.returncode == 1
+    assert rejected.stdout == ""
+    assert "must not be empty" in rejected.stderr
 
     check = tmp_path / "check_scoring.py"
     check.write_text(

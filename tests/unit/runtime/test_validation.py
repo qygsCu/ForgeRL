@@ -117,4 +117,3 @@ def test_validate_plugin_options_rejects_unknown_plugin() -> None:
             kind=PluginKind.ROLLOUT,
             registry=registry,
         )
-

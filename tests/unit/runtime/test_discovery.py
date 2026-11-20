@@ -62,6 +62,7 @@ def test_load_entry_point_preserves_declaration_without_instantiation(
     assert descriptor.config_model is MockConfig
     assert descriptor.factory is MockReward
 
+
 def test_load_entry_point_preserves_import_error(
     monkeypatch: pytest.MonkeyPatch,
     reward_entry_point: metadata.EntryPoint,
@@ -81,6 +82,7 @@ def test_load_entry_point_preserves_import_error(
 
     assert "forgerl.reward:mock_reward" in str(exc_info.value)
     assert exc_info.value.__cause__ is original_error
+
 
 def test_discover_plugins_registers_entry_points(
     monkeypatch: pytest.MonkeyPatch,
@@ -104,3 +106,29 @@ def test_discover_plugins_registers_entry_points(
     descriptor = registry.get(PluginKind.REWARD, "mock_reward")
     assert descriptor.factory is MockReward
     assert registry.list_plugins() == [descriptor]
+
+
+@pytest.mark.parametrize(
+    "field,value,error",
+    [
+        ("metadata", None, "metadata must be a PluginMetadata"),
+        ("metadata", {}, "metadata must be a PluginMetadata"),
+        ("metadata", "invalid", "metadata must be a PluginMetadata"),
+        ("config_model", None, "config_model must be a Pydantic BaseModel subclass"),
+        ("config_model", MockConfig(), "config_model must be a Pydantic BaseModel subclass"),
+        ("config_model", object, "config_model must be a Pydantic BaseModel subclass"),
+    ],
+)
+def test_invalid_declaration_is_rejected_with_context_and_cause(
+    monkeypatch: pytest.MonkeyPatch,
+    reward_entry_point: metadata.EntryPoint,
+    field: str,
+    value: object,
+    error: str,
+) -> None:
+    malformed = type("MalformedReward", (MockReward,), {field: value})
+    monkeypatch.setattr(metadata.EntryPoint, "load", lambda self: malformed)
+    with pytest.raises(PluginLoadError, match="forgerl.reward:mock_reward") as caught:
+        discovery.load_entry_point(reward_entry_point, kind=PluginKind.REWARD)
+    assert isinstance(caught.value.__cause__, PluginLoadError)
+    assert error in str(caught.value.__cause__)

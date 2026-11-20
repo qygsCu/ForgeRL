@@ -23,7 +23,7 @@
 - `TrajectoryBatch.prompt_ids`、`response_ids` 是 Token 张量，不是问题或回答的业务身份。
 - SDK 已有 `PluginLifecycle` 和 `PluginContext`；Runtime 已有 `managed_plugin()`。
 - `managed_plugin()` 管理初始化和清理，但执行体异常原样传播，不自动包装 `compute` 异常。
-- 当前尚无 Reward 业务 Protocol、评分输入输出类型或 `plugin test` 命令。
+- 本ADR起草时尚无 Reward 业务 Protocol、评分输入输出类型或 `plugin test` 命令；后续进展见文末实现记录。
 - 现有 CLI 安装样例禁止实例化，仅验证管理命令，不是可执行的 Reward 插件。
 
 ### 本轮讨论已确认的方向
@@ -176,6 +176,23 @@
 - 代价及重新评估条件：任意精度仍受Python整数字符串转换限制和资源约束；需要近似比较、数学函数或公式求值时，重新定义规则并做对照测试，不自动扩大语法。
 - 实现：examples/math_reward独立发行包，通过entry point发现，插件仅导入公开SDK；目前位于主仓示例目录，尚未创建独立Git仓库。
 
+### 评分检查流程归属（2026-11-20，Required）
+
+- 思考过程：最初在CLI内读取并校验样例、返回tuple；负责人指出数据地址应直接交给系统，读取和评分属于系统内部编排，且compute_rewards已有tuple转换。
+- 初版选择：runtime/reward_test.py提供run_reward_test，负责发现、配置与文件校验、初始化、评分、输出校验和清理，最后返回报告；CLI只解析参数、调用入口并展示JSON及退出码。读取函数返回list，字段类型和ID规则复用SDK，保留JSON结构与未知/重复字段检查；批次在创建插件之前校验，评分边界仍保护其他调用方。后续模块合并与Registry归属按下节调整。
+- 最简单替代方案：继续由CLI串联会让Python调用方依赖命令行模块；当前使用普通流程函数即可，不引入Scheduler或已校验对象等新抽象。
+- 核心不变量：只有配置与样例合法才创建插件，关闭成功后才交付成功报告。合法valid=False（含全部失败）是协议允许的结果，报告数量与原因；非法输出或生命周期异常使检查失败。输入只读转换统一留给compute_rewards。
+- 命令：plugin test NAME --kind reward --samples FILE [--options FILE]；省略options使用{}并应用插件默认值，显式文件非法不回退。报告包含status、plugin、config、sample_count、valid_count、invalid_count、failures；退出码0/1/2分别表示协议通过、操作失败、用法错误。
+- 范围与代价：首版限定CPU、无Checkpoint及无额外必需运行时能力的Reward；样例调用通过不证明所有能力或业务准确性。CLI将插件标准输出重定向到stderr，保留stdout的JSON报告；仅面向当前单线程命令，不提供并发或进程隔离保证。
+
+### 合并评分模块并由调用方持有Registry（2026-11-20，Required）
+
+- 问题与思考：负责人将样例读取与检查流程合入runtime/rewards.py，并指出每个插件入口自行发现会造成重复Registry；同一次运行应共享同一份插件目录。
+- 选择：补齐rewards.py的依赖，移除旧reward_test.py的重复实现，CLI、测试和文档统一引用新位置；保留run_reward_test(name, samples_path, registry, options_path=None)，内部只使用传入Registry。命令入口发现一次再传入，后续多插件运行由顶层Runtime统一发现并复用，不引入全局可变单例。
+- 最简单替代方案与代价：保留旧模块代理会增加两个入口的维护成本；当前契约未稳定发布，直接同步调用方，不提供旧路径兼容层。Python调用方需显式传Registry，换取依赖清晰和测试隔离。
+- 核心不变量：数据校验、评分失败语义和清理行为不变；重复调用不修改Registry中的描述对象，不在单插件检查函数中重新发现或注册。
+- 验证：以共享Registry连续执行两次检查，验证工厂各调用一次且无重新发现；其余结果见文末记录。若未来进程隔离改变Registry可见范围，再评审实例传递边界。
+
 ## Alternatives Considered
 
 ## Invariants
@@ -212,7 +229,10 @@
 - 实现位置：sdk/schemas.py中的RewardSample、RewardResult、RewardOutput及输入校验；sdk/rewards.py中的RewardPlugin；runtime/rewards.py中的compute_rewards，生命周期复用managed_plugin()。
 - 已执行检查与结果：ForgeRL Conda环境下全量pytest共282项通过；最终诊断调整后相关58项再次通过。Ruff全仓检查、本次修改文件格式检查及4个修改/新增源文件的mypy检查通过。全量mypy在未修改的runtime/discovery.py第39、40行报告2处类型错误，未在本切片扩展修复。
 - 数学插件验证（2026-11-14）：全量回归283项通过；随后补充分数字符串转换限制的错误传播处理，重新安装最终版本，规则测试及真实安装集成测试通过。新插件及测试的Ruff、格式检查通过，结合SDK源码的8个源文件mypy检查通过。安装测试从仓库外验证entry point、两种配置、评分调用及无CUDA访问，未改动Runtime或SDK实现。
-- 未验证项：独立Git仓库及plugin test一致性入口尚未建立；未实现训练组过滤、批次输入对象、多进程或GPU评分。完整规则和调用示例见[数学插件README](../../examples/math_reward/README.md)。
+- 流程迁移与命令验证（2026-11-20）：样例读取迁至runtime/reward_test.py，返回list，SDK承担字段约束；run_reward_test自动完成发现、配置/样例校验、初始化、评分和关闭。CLI已接入plugin test，合法valid=False保持协议通过并报告原因。全量346项测试通过，包含外部安装后的真实命令调用；Ruff全仓及修改文件格式检查通过，两个本次源文件的定向mypy检查（follow-imports=silent）通过，全量mypy仍在未修改的discovery.py第39、40行报告2处类型错误。
+- 模块合并验证（2026-11-20）：沿用负责人搬迁方案，评分相关函数统一在runtime/rewards.py，run_reward_test要求传入Registry；CLI、测试和README同步，移除旧模块的重复实现。全量347项测试通过，含共享Registry复用、每次命令仅发现一次及外部安装评分测试；Ruff全仓、修改文件格式及两个修改源文件的定向mypy检查通过。全量mypy仍有上述2处既有错误。
+- 工程检查收尾（2026-11-20）：discovery.py先将动态加载字段视为object，再检查PluginMetadata及Pydantic配置模型类型后构造描述对象，修复2处mypy错误，未使用cast或忽略标记；新增6项非法声明回归用例，并修正4处文件格式差异。Windows/Python 3.11.16环境下，全仓Ruff、格式检查、18个源文件mypy均通过，完整pytest为353项通过。主包和数学插件使用已有构建依赖（--no-isolation）生成sdist与wheel；本轮未触发远端CI或验证Ubuntu环境。
+- 未验证项：独立Git仓库与跨仓库验收由负责人明确暂缓（Deferred）；该命令仅验证给定样例的一次CPU协议调用，不证明业务准确性、所有生命周期重复操作或隐式CUDA访问均无问题。训练组过滤、批次输入对象、多进程或GPU评分未实现。完整规则和调用示例见[数学插件README](../../examples/math_reward/README.md)。
 
 ## References
 

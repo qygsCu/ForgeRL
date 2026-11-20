@@ -2,9 +2,11 @@
 
 from importlib import metadata
 
+from pydantic import BaseModel
+
 from forgerl.runtime.registry import PluginRegistry
 from forgerl.sdk.errors import PluginLoadError
-from forgerl.sdk.plugins import PluginDescriptor, PluginKind
+from forgerl.sdk.plugins import PluginDescriptor, PluginKind, PluginMetadata
 
 
 def load_entry_point(
@@ -22,8 +24,7 @@ def load_entry_point(
     expected_group = f"forgerl.{kind.value}"
     if entry_point.group != expected_group:
         raise PluginLoadError(
-            f"plugin {plugin_id} uses group {entry_point.group!r}; "
-            f"expected {expected_group!r}"
+            f"plugin {plugin_id} uses group {entry_point.group!r}; expected {expected_group!r}"
         )
 
     try:
@@ -35,9 +36,15 @@ def load_entry_point(
         raise PluginLoadError(f"plugin {plugin_id} entry point must reference a class")
 
     try:
+        declared_metadata: object = getattr(plugin_class, "metadata", None)
+        config_model: object = getattr(plugin_class, "config_model", None)
+        if not isinstance(declared_metadata, PluginMetadata):
+            raise PluginLoadError("metadata must be a PluginMetadata")
+        if not isinstance(config_model, type) or not issubclass(config_model, BaseModel):
+            raise PluginLoadError("config_model must be a Pydantic BaseModel subclass")
         descriptor = PluginDescriptor(
-            metadata=getattr(plugin_class, "metadata", None),
-            config_model=getattr(plugin_class, "config_model", None),
+            metadata=declared_metadata,
+            config_model=config_model,
             factory=plugin_class,
         )
     except (AttributeError, PluginLoadError) as exc:

@@ -99,5 +99,13 @@ pytest、Pydantic、PyTorch、pip、setuptools >= 77.0.3 和 wheel。
 
 `Fraction` 使用任意精度整数，但仍受 Python 整数字符串转换限制及可用资源约束；
 不承诺支持无限长度数值或无限指数。格式合法但因转换限制或资源故障无法评分时，
-异常向外传播，不静默判为零分。当前无 GPU、Checkpoint、多进程能力，
-ForgeRL 的 `plugin test` 命令仍是后续工作。
+异常向外传播，不静默判为零分。当前无 GPU、Checkpoint、多进程能力。
+可通过 ForgeRL 的协议检查命令调用：
+
+```bash
+forgerl plugin test math_reward --kind reward --samples examples/math_reward/samples.json
+forgerl plugin test math_reward --kind reward --samples examples/math_reward/samples.json --options options.json
+```
+
+第二条命令使用前面创建的配置文件。报告只验证协议，不验证预期业务奖励；
+评分正确性由本包规则测试验证。关闭成功后才输出成功报告。
